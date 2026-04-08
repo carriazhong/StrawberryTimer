@@ -25,8 +25,8 @@ class StrawberryWidget(QWidget):
         super().__init__()
         self.timer_engine = timer_engine
 
-        # Super tiny: 20x15 pixels
-        self.resize(20, 15)
+        # Super tiny: 12x10 pixels
+        self.resize(12, 10)
 
         # Frameless + always on top
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
@@ -42,11 +42,11 @@ class StrawberryWidget(QWidget):
         # Red strawberry background
         p.setBrush(QColor(220, 50, 50))
         p.setPen(QColor(180, 30, 30))
-        p.drawRect(0, 0, 20, 15)
+        p.drawRect(0, 0, 12, 10)
 
-        # Small number
+        # Tiny number
         p.setPen(QColor(255, 255, 255))
-        p.setFont(QFont("Arial", 8))
+        p.setFont(QFont("Arial", 6))
         mins = "25"
         if self.timer_engine:
             mins = str(int(self.timer_engine.remaining.total_seconds() // 60))
@@ -136,7 +136,7 @@ class MainWindow(QMainWindow):
         self.strawberry = StrawberryWidget(self.timer)
         self.strawberry.show()
         screen = QApplication.desktop().screenGeometry()
-        self.strawberry.move(screen.width() - 40, 50)
+        self.strawberry.move(screen.width() - 30, 50)
 
     def update_timer(self):
         self.timer_label.setText(self.timer.remaining_time_str)
