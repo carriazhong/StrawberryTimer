@@ -30,7 +30,7 @@ def parse_arguments():
         Parsed arguments namespace.
     """
     parser = argparse.ArgumentParser(
-        description="🍓 Strawberry Timer - A simple desktop Pomodoro timer"
+        description="Strawberry Timer - A simple desktop Pomodoro timer"
     )
 
     parser.add_argument(

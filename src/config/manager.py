@@ -6,7 +6,6 @@ from typing import Any, Callable, Dict, List, Optional
 from dataclasses import dataclass, field
 
 
-@dataclass
 class ConfigManager:
     """Configuration manager for Strawberry Timer.
 
@@ -14,8 +13,8 @@ class ConfigManager:
     Supports change notifications for reactive updates.
     """
 
-    # Default configuration
-    DEFAULTS: Dict[str, Any] = field(default_factory=lambda: {
+    # Default configuration (class attribute)
+    DEFAULTS: Dict[str, Any] = {
         "work_duration_minutes": 25,
         "sound_enabled": True,
         "sound_file": "assets/alarm.mp3",
@@ -23,7 +22,7 @@ class ConfigManager:
         "volume": 80,
         "always_on_top": True,
         "show_desktop_widget": True,
-    })
+    }
 
     # Valid themes
     VALID_THEMES = ["strawberry", "dark", "light"]
