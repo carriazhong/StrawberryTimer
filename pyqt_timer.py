@@ -19,38 +19,68 @@ except ImportError:
 
 
 class StrawberryWidget(QWidget):
-    """Tiny strawberry widget - just a small red rectangle."""
+    """Strawberry timer widget - configurable size."""
 
-    def __init__(self, timer_engine=None):
+    def __init__(self, timer_engine=None, width=80, height=30, font_size=14):
+        """Initialize strawberry widget.
+
+        Args:
+            timer_engine: TimerEngine for time updates.
+            width: Widget width in pixels (default: 80 - for MM:SS format).
+            height: Widget height in pixels (default: 30).
+            font_size: Font size in pixels (default: 14).
+        """
         super().__init__()
         self.timer_engine = timer_engine
+        self.width = width
+        self.height = height
+        self.font_size = font_size
+        self.time_str = "25:00"
 
-        # Super tiny: 12x10 pixels
-        self.resize(12, 10)
+        # Set size
+        self.resize(width, height)
+        self.setMinimumSize(width, height)
+        self.setMaximumSize(width, height)
 
         # Frameless + always on top
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WA_ShowWithoutActivating, True)
+
+        # Make background semi-transparent
+        self.setWindowOpacity(0.85)
 
         self.setMouseTracking(True)
         self._drag_pos = None
 
     def paintEvent(self, event):
-        """Draw tiny strawberry indicator."""
+        """Draw strawberry timer indicator."""
         p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
 
-        # Red strawberry background
-        p.setBrush(QColor(220, 50, 50))
+        # Red strawberry background (rounded rectangle)
+        rect = self.rect()
+        p.setBrush(QColor(220, 50, 50, 230))  # Semi-transparent red
         p.setPen(QColor(180, 30, 30))
-        p.drawRect(0, 0, 12, 10)
+        corner_radius = max(2, min(5, min(self.width, self.height) // 8))
+        p.drawRoundedRect(rect, corner_radius, corner_radius)
 
-        # Tiny number
+        # Timer number (font scales with size)
         p.setPen(QColor(255, 255, 255))
-        p.setFont(QFont("Arial", 6))
-        mins = "25"
+        font = QFont("Arial", int(self.font_size), QFont.Bold)
+        font.setPixelSize(self.font_size)  # Force exact pixel size
+        p.setFont(font)
+
+        # Show full timer (MM:SS)
+        time_str = "25:00"
         if self.timer_engine:
-            mins = str(int(self.timer_engine.remaining.total_seconds() // 60))
-        p.drawText(self.rect(), Qt.AlignCenter, mins)
+            total_seconds = int(self.timer_engine.remaining.total_seconds())
+            minutes = total_seconds // 60
+            seconds = total_seconds % 60
+            time_str = f"{minutes:02d}:{seconds:02d}"
+
+        # Draw text centered
+        p.drawText(self.rect(), Qt.AlignCenter, time_str)
 
     def mousePressEvent(self, ev):
         if ev.button() == Qt.LeftButton:
@@ -63,7 +93,13 @@ class StrawberryWidget(QWidget):
     def mouseReleaseEvent(self, ev):
         self._drag_pos = None
 
-    def update_timer(self):
+    def update_timer(self, time_str="25:00"):
+        """Update timer display.
+
+        Args:
+            time_str: Time string in MM:SS format.
+        """
+        self.time_str = time_str
         self.update()
 
 
@@ -133,14 +169,21 @@ class MainWindow(QMainWindow):
         layout.addLayout(btn_layout)
 
     def init_strawberry(self):
-        self.strawberry = StrawberryWidget(self.timer)
+        # Default: 80×30px, 14px font - shows full timer (MM:SS)
+        # For SMALL size: StrawberryWidget(self.timer, 30, 22, 10)
+        # For MEDIUM size: StrawberryWidget(self.timer, 40, 30, 14)
+
+        self.strawberry = StrawberryWidget(self.timer, width=80, height=30, font_size=14)
         self.strawberry.show()
         screen = QApplication.desktop().screenGeometry()
-        self.strawberry.move(screen.width() - 30, 50)
+        # Position in top-right corner
+        margin = self.strawberry.width + 10
+        self.strawberry.move(screen.width() - margin, 50)
 
     def update_timer(self):
         self.timer_label.setText(self.timer.remaining_time_str)
-        self.strawberry.update_timer()
+        # Pass full time string to strawberry widget (MM:SS format)
+        self.strawberry.update_timer(self.timer.remaining_time_str)
 
         if self.timer.is_running:
             self.status.setText("🍓 Focus time!")
@@ -173,10 +216,24 @@ class MainWindow(QMainWindow):
         self.stop_btn.setEnabled(False)
         self.update_timer()
 
+    def closeEvent(self, event):
+        """Handle main window close event.
+
+        Also closes the floating strawberry widget.
+        """
+        # Close floating widget
+        if hasattr(self, 'strawberry') and self.strawberry:
+            self.strawberry.close()
+            self.strawberry = None
+
+        # Accept the close event
+        event.accept()
+
 
 def main():
     app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)
+    # Allow application to quit when last window is closed
+    app.setQuitOnLastWindowClosed(True)
 
     config = ConfigManager.load()
     timer = TimerEngine(config.all)

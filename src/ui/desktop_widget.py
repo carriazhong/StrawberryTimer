@@ -25,12 +25,12 @@ class DesktopWidget(tk.Toplevel):
     - Shows timer status and remaining time
     """
 
-    # Size: Small strawberry icon
-    WIDTH = 50
-    HEIGHT = 60
+    # Size: Timer widget (80x30 pixels to show MM:SS)
+    WIDTH = 80
+    HEIGHT = 30
 
-    # Default transparency (alpha channel, 0-255)
-    DEFAULT_ALPHA = 240
+    # Default transparency (alpha channel, 0-255) - more transparent
+    DEFAULT_ALPHA = 200
 
     def __init__(self, master=None, timer_engine=None, config_manager=None):
         """Initialize desktop widget.
@@ -108,8 +108,8 @@ class DesktopWidget(tk.Toplevel):
         # Position on screen (default: top-right corner)
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
-        default_x = screen_width - self.WIDTH - 50
-        default_y = 50
+        default_x = screen_width - self.WIDTH - 10  # Small margin
+        default_y = 10  # Small margin from top
         self.geometry(f"+{default_x}+{default_y}")
 
         # Protocol for window close (X button)
@@ -141,108 +141,30 @@ class DesktopWidget(tk.Toplevel):
         self._canvas.bind("<Control-Button-1>", self._show_context_menu)
 
     def _draw_strawberry(self) -> None:
-        """Draw a strawberry shape on the canvas."""
-        cx, cy = self.WIDTH / 2, self.HEIGHT / 2 - 2
+        """Draw a simple strawberry shape on the canvas."""
+        cx, cy = self.WIDTH / 2, self.HEIGHT / 2
 
-        # Draw strawberry body - heart shape using polygon
-        body_points = [
-            cx, cy + 22,  # Bottom tip
-            cx - 18, cy - 5,  # Left upper
-            cx - 12, cy - 12,  # Left top
-            cx, cy - 8,  # Center top
-            cx + 12, cy - 12,  # Right top
-            cx + 18, cy - 5,  # Right upper
-        ]
-        self._canvas.create_polygon(
-            body_points,
+        # Draw simple rounded rectangle as strawberry body
+        margin = 3
+        self._canvas.create_rectangle(
+            margin, margin,
+            self.WIDTH - margin, self.HEIGHT - margin,
             fill="#E53935",  # Strawberry red
             outline="#B71C1C",  # Dark red outline
-            width=2,
-            smooth=True,
+            width=1,
             tags="strawberry_body"
         )
 
-        # Draw seeds (small yellow dots)
-        seed_positions = [
-            (cx - 8, cy), (cx + 8, cy),
-            (cx - 5, cy + 8), (cx + 5, cy + 8),
-            (cx, cy + 12),
-            (cx - 10, cy + 4), (cx + 10, cy + 4),
-        ]
-        for sx, sy in seed_positions:
-            self._canvas.create_oval(
-                sx - 1, sy - 1, sx + 1, sy + 1,
-                fill="#FFEB3B",
-                outline="",
-                tags="seeds"
-            )
-
-        # Draw green leaves/calyx on top
-        leaf_color = "#4CAF50"
-        # Center leaf
-        self._canvas.create_polygon(
-            cx, cy - 12,
-            cx - 3, cy - 20,
-            cx + 3, cy - 20,
-            fill=leaf_color,
-            outline="",
-            tags="leaves"
-        )
-        # Left leaf
-        self._canvas.create_polygon(
-            cx - 2, cy - 14,
-            cx - 10, cy - 18,
-            cx - 5, cy - 10,
-            fill=leaf_color,
-            outline="",
-            tags="leaves"
-        )
-        # Right leaf
-        self._canvas.create_polygon(
-            cx + 2, cy - 14,
-            cx + 10, cy - 18,
-            cx + 5, cy - 10,
-            fill=leaf_color,
-            outline="",
-            tags="leaves"
-        )
-
-        # Draw timer text in center
+        # Draw timer text in center (show MM:SS format)
         self._time_text = self._canvas.create_text(
-            cx, cy + 2,
-            text="25",
-            font=("Segoe UI", 14, "bold"),
+            cx, cy,
+            text="25:00",  # Full time format
+            font=("Arial", 14, "bold"),
             fill="white",
             tags="timer"
         )
 
-        # Draw tiny close button in top-right corner
-        btn_x, btn_y = self.WIDTH - 8, 4
-        self._canvas.create_oval(
-            btn_x, btn_y,
-            btn_x + 8, btn_y + 8,
-            fill="#FF0000",
-            outline="white",
-            width=1,
-            tags="close_btn"
-        )
-        self._canvas.create_line(
-            btn_x + 2, btn_y + 2,
-            btn_x + 6, btn_y + 6,
-            fill="white",
-            width=2,
-            tags="close_btn"
-        )
-        self._canvas.create_line(
-            btn_x + 6, btn_y + 2,
-            btn_x + 2, btn_y + 6,
-            fill="white",
-            width=2,
-            tags="close_btn"
-        )
-
-        # Bind close button
-        self._canvas.tag_bind("close_btn", "<Button-1>", lambda e: self._on_close_button())
+        # No close button for floating widget - use right-click menu instead.
 
     def _setup_drag(self) -> None:
         """Setup mouse drag behavior for widget."""
@@ -333,10 +255,12 @@ class DesktopWidget(tk.Toplevel):
             remaining = self._timer_engine.remaining
             total_seconds = int(remaining.total_seconds())
             minutes = total_seconds // 60
+            seconds = total_seconds % 60
+            time_str = f"{minutes:02d}:{seconds:02d}"
 
             # Update timer text on canvas
             if hasattr(self, '_canvas') and self._canvas:
-                self._canvas.itemconfig(self._time_text, text=str(minutes))
+                self._canvas.itemconfig(self._time_text, text=time_str)
 
                 # Update strawberry color based on timer state
                 if self._timer_engine.is_running:
@@ -357,10 +281,12 @@ class DesktopWidget(tk.Toplevel):
             remaining = self._timer_engine.remaining
             total_seconds = int(remaining.total_seconds())
             minutes = total_seconds // 60
+            seconds = total_seconds % 60
+            time_str = f"{minutes:02d}:{seconds:02d}"
 
             # Update timer text on canvas
             if hasattr(self, '_canvas') and self._canvas:
-                self._canvas.itemconfig(self._time_text, text=str(minutes))
+                self._canvas.itemconfig(self._time_text, text=time_str)
 
                 # Update strawberry color based on timer state
                 if self._timer_engine.is_running:
@@ -481,10 +407,12 @@ class DesktopWidget(tk.Toplevel):
 
     def _on_close(self) -> None:
         """Handle window close (X button or close command)."""
+        # Just hide - allow reopening via right-click menu or main window
         self.hide()
 
     def _on_close_button(self) -> None:
         """Handle close button click."""
+        # Just hide - allow reopening via right-click menu or main window
         self.hide()
 
     def _toggle_main_window(self) -> None:
@@ -502,6 +430,14 @@ class DesktopWidget(tk.Toplevel):
         self.withdraw()
         self._visible = False
         self.update_idletasks()  # Ensure state is updated
+
+    def close_widget(self) -> None:
+        """Completely destroy the widget (not just hide).
+
+        Use this when closing the entire application.
+        """
+        self.destroy()
+        self._visible = False
 
     def show_context_menu(self) -> tk.Menu:
         """Show and return the context menu.

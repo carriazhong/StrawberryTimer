@@ -238,6 +238,9 @@ class MainWindow(tk.Tk):
         # Create desktop widget
         self._create_desktop_widget()
 
+        # Handle window close event - destroy desktop widget when main window closes
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
     def center_window(self) -> None:
         """Center window on screen."""
         self.update_idletasks()
@@ -422,6 +425,23 @@ class MainWindow(tk.Tk):
             todos: List of Todo items.
         """
         self.todo_selector.set_todos(todos)
+
+    def _on_close(self) -> None:
+        """Handle main window close event.
+
+        Closes the desktop floating widget and destroys main window.
+        """
+        # Close/destroy desktop widget
+        if self._desktop_widget:
+            try:
+                self._desktop_widget.destroy()
+                self._desktop_widget = None
+            except Exception:
+                # Widget already destroyed or doesn't exist
+                self._desktop_widget = None
+
+        # Destroy main window and quit application
+        self.destroy()
 
 
 def run_application(timer_engine=None, config_manager=None) -> MainWindow:
