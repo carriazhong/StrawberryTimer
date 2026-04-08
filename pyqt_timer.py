@@ -22,7 +22,8 @@ try:
                                   QVBoxLayout, QHBoxLayout, QWidget, QSystemTrayIcon,
                                   QMenu, QAction, QSlider)
     from PyQt5.QtCore import Qt, QTimer, QPoint, pyqtSignal
-    from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QPen, QBrush, QFont
+    from PyQt5.QtGui import (QIcon, QPixmap, QPainter, QColor, QPen, QBrush,
+                             QFont, QPainterPath)
 except ImportError:
     print("PyQt5 not installed. Please install it with: pip install PyQt5")
     sys.exit(1)
