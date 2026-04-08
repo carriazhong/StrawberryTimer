@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Strawberry Timer - Simple emoji-based widget."""
+"""Strawberry Timer - Tiny widget version."""
 
 import sys
 from pathlib import Path
@@ -12,98 +12,41 @@ from src.config import ConfigManager
 try:
     from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QWidget
     from PyQt5.QtCore import Qt, QTimer
-    from PyQt5.QtGui import QPainter, QColor, QPen, QBrush, QFont, QPainterPath, QPixmap, QRegion
+    from PyQt5.QtGui import QPainter, QColor, QFont
 except ImportError:
     print("PyQt5 not installed.")
     sys.exit(1)
 
 
 class StrawberryWidget(QWidget):
-    """Super simple strawberry widget using SVG emoji style."""
+    """Tiny strawberry widget - just a small red rectangle."""
 
     def __init__(self, timer_engine=None):
         super().__init__()
         self.timer_engine = timer_engine
 
-        # Super tiny - just big enough for strawberry
-        self.resize(40, 50)
+        # Super tiny: 20x15 pixels
+        self.resize(20, 15)
 
-        # Make window transparent and frameless
+        # Frameless + always on top
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.setAttribute(Qt.WA_OpaquePaintEvent, False)
 
         self.setMouseTracking(True)
         self._drag_pos = None
 
-        # Create shape mask
-        self._make_round_mask()
-
-    def _make_round_mask(self):
-        """Create circular/strawberry mask."""
-        size = min(self.width(), self.height())
-        pixmap = QPixmap(self.size())
-        pixmap.fill(Qt.transparent)
-
-        p = QPainter(pixmap)
-        p.setRenderHint(QPainter.Antialiasing)
-        p.setPen(Qt.NoPen)
-        p.setBrush(Qt.black)
-
-        # Draw strawberry shape (top rounded, bottom pointy)
-        path = QPainterPath()
-        # Start at bottom
-        path.moveTo(20, 48)
-        # Left curve going up
-        path.cubicTo(5, 40, 2, 25, 2, 15)
-        # Top rounded
-        path.cubicTo(2, 5, 38, 5, 38, 15)
-        # Right curve going down
-        path.cubicTo(38, 25, 35, 40, 20, 48)
-
-        p.drawPath(path)
-        p.end()
-
-        mask = pixmap.createMaskFromColor(Qt.transparent)
-        self.setMask(QRegion(mask))
-
     def paintEvent(self, event):
-        """Draw strawberry."""
+        """Draw tiny strawberry indicator."""
         p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
 
-        # Strawberry red color
-        red = QColor(220, 50, 50)
+        # Red strawberry background
+        p.setBrush(QColor(220, 50, 50))
+        p.setPen(QColor(180, 30, 30))
+        p.drawRect(0, 0, 20, 15)
 
-        # Draw strawberry body
-        path = QPainterPath()
-        path.moveTo(20, 46)
-        path.cubicTo(5, 38, 2, 25, 2, 15)
-        path.cubicTo(2, 5, 38, 5, 38, 15)
-        path.cubicTo(38, 25, 35, 38, 20, 46)
-
-        p.setBrush(QBrush(red))
-        p.setPen(QPen(QColor(180, 30, 30), 1))
-        p.drawPath(path)
-
-        # Green leaves at top
-        p.setBrush(QBrush(QColor(80, 160, 80)))
-        p.setPen(Qt.NoPen)
-        p.drawEllipse(16, 3, 8, 6)  # center
-        p.drawEllipse(8, 5, 6, 5)    # left
-        p.drawEllipse(26, 5, 6, 5)   # right
-
-        # Seeds
-        p.setBrush(QBrush(QColor(255, 180, 0)))
-        p.drawEllipse(10, 18, 3, 3)
-        p.drawEllipse(27, 18, 3, 3)
-        p.drawEllipse(18, 25, 3, 3)
-        p.drawEllipse(12, 32, 3, 3)
-        p.drawEllipse(25, 32, 3, 3)
-
-        # Number
+        # Small number
         p.setPen(QColor(255, 255, 255))
-        p.setFont(QFont("Arial", 10, QFont.Bold))
+        p.setFont(QFont("Arial", 8))
         mins = "25"
         if self.timer_engine:
             mins = str(int(self.timer_engine.remaining.total_seconds() // 60))
@@ -193,7 +136,7 @@ class MainWindow(QMainWindow):
         self.strawberry = StrawberryWidget(self.timer)
         self.strawberry.show()
         screen = QApplication.desktop().screenGeometry()
-        self.strawberry.move(screen.width() - 70, 50)
+        self.strawberry.move(screen.width() - 40, 50)
 
     def update_timer(self):
         self.timer_label.setText(self.timer.remaining_time_str)
