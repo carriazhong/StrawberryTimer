@@ -342,27 +342,38 @@ class MainWindow(tk.Tk):
 
     def on_start_click(self) -> None:
         """Handle start button click."""
+        if self._timer_engine:
+            self._timer_engine.start()
         self.status_label.config(text="🍓 Focus time! Stay productive!")
         self.start_button.config(state="disabled")
         self.pause_button.config(state="normal", text="⏸ Pause")
         self.stop_button.config(state="normal")
-        # TODO: Connect to TimerEngine
 
     def on_pause_click(self) -> None:
         """Handle pause button click."""
-        self.status_label.config(text="⏸️ Timer paused. Take a breath!")
-        self.pause_button.config(text="▶ Resume")
-        # TODO: Connect to TimerEngine
+        if self._timer_engine:
+            if self._timer_engine.is_running:
+                self._timer_engine.pause()
+                self.status_label.config(text="⏸️ Timer paused. Take a breath!")
+                self.pause_button.config(text="▶ Resume")
+            else:
+                self._timer_engine.resume()
+                self.status_label.config(text="🍓 Focus time! Stay productive!")
+                self.pause_button.config(text="⏸ Pause")
+        else:
+            self.status_label.config(text="⏸️ Timer paused. Take a breath!")
+            self.pause_button.config(text="▶ Resume")
 
     def on_stop_click(self) -> None:
         """Handle stop button click."""
+        if self._timer_engine:
+            self._timer_engine.stop()
         self.status_label.config(text="Ready to focus!")
         self.start_button.config(state="normal")
         self.pause_button.config(state="disabled", text="⏸ Pause")
         self.stop_button.config(state="disabled")
         self.timer_display.update_time(timedelta(minutes=25))
         self.progress_bar.set_progress(100)
-        # TODO: Connect to TimerEngine
 
     # ==================== Public Methods ====================
 

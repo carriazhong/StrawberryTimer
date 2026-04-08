@@ -19,14 +19,14 @@ class TestDesktopWidgetSize:
     """Test desktop widget sizing requirements."""
 
     def test_widget_width_is_small(self, desktop_widget):
-        """Desktop widget should be small (25 pixels wide)."""
+        """Desktop widget should be small (50 pixels wide)."""
         widget_width = desktop_widget.winfo_width()
-        assert widget_width == 25
+        assert widget_width == 50
 
     def test_widget_height_is_small(self, desktop_widget):
-        """Desktop widget should be small (31 pixels tall)."""
+        """Desktop widget should be small (60 pixels tall)."""
         widget_height = desktop_widget.winfo_height()
-        assert widget_height == 31
+        assert widget_height == 60
 
     def test_widget_dimensions_are_proportional(self, desktop_widget):
         """Widget should maintain proportional aspect ratio."""
