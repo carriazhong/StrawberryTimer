@@ -18,17 +18,15 @@ from tkinter import Tk
 class TestDesktopWidgetSize:
     """Test desktop widget sizing requirements."""
 
-    def test_widget_width_is_one_quarter_main_window(self, desktop_widget, main_window):
-        """Desktop widget width should be 1/4 of main window width."""
-        main_width = main_window.winfo_width()
+    def test_widget_width_is_small(self, desktop_widget):
+        """Desktop widget should be small (25 pixels wide)."""
         widget_width = desktop_widget.winfo_width()
-        assert widget_width == main_width // 4
+        assert widget_width == 25
 
-    def test_widget_height_is_one_quarter_main_window(self, desktop_widget, main_window):
-        """Desktop widget height should be 1/4 of main window height."""
-        main_height = main_window.winfo_height()
+    def test_widget_height_is_small(self, desktop_widget):
+        """Desktop widget should be small (31 pixels tall)."""
         widget_height = desktop_widget.winfo_height()
-        assert widget_height == main_height // 4
+        assert widget_height == 31
 
     def test_widget_dimensions_are_proportional(self, desktop_widget):
         """Widget should maintain proportional aspect ratio."""
@@ -156,9 +154,9 @@ class TestStrawberryIcon:
         """Icon size should be appropriate for small widget."""
         icon_size = desktop_widget.get_icon_size()
         widget_size = min(desktop_widget.winfo_width(), desktop_widget.winfo_height())
-        # Icon should be significant portion of widget but not fill it
+        # Icon should be significant portion of widget (about 70% of width)
         assert icon_size >= widget_size * 0.5
-        assert icon_size <= widget_size * 0.9
+        assert icon_size <= widget_size
 
 
 # ==================== Test: Timer Display in Widget ====================

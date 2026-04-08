@@ -3,15 +3,17 @@
 ## Requirements Analysis
 
 ### Functional Requirements
-1. **Small strawberry icon**: 1/4 size of main window (100x125 pixels based on 400x500 main window)
-2. **Transparent background**: Alpha channel transparency for floating effect
-3. **Floats on desktop**: Topmost window, draggable, stays in screen bounds
-4. **Can be closed**: Hide/show mechanism, survives main window close
-5. **Timer display**: Shows remaining time and status
+1. **Small strawberry icon**: 1/16 size of main window (25x31 pixels based on 400x500 main window)
+2. **Strawberry shape**: Heart-shaped red body with green leaves, transparent background
+3. **Transparent background**: Alpha channel transparency for floating effect
+4. **Floats on desktop**: Topmost window, draggable, stays in screen bounds
+5. **Can be closed**: Hide/show mechanism, survives main window close
+6. **Timer display**: Shows remaining minutes in center of strawberry
+7. **Status indicator**: Strawberry color changes based on timer state
 
 ### Non-Functional Requirements
 - **Performance**: Minimal CPU usage, efficient update loop
-- **Platform**: Windows, macOS, Linux compatibility
+- **Platform**: Windows (primary), macOS, Linux compatibility
 - **Usability**: Easy to close/reopen, not intrusive
 
 ## Architecture Design
@@ -31,9 +33,9 @@ src/ui/
 class DesktopWidget(tk.Toplevel):
     """Floating desktop widget with strawberry icon and timer display."""
 
-    # Size: 1/4 of main window = 100x125 pixels
-    WIDTH = 100
-    HEIGHT = 125
+    # Size: 1/16 of main window = 25x31 pixels
+    WIDTH = 25
+    HEIGHT = 31
 
     def __init__(self, master, timer_engine=None, config_manager=None):
         """Initialize desktop widget.

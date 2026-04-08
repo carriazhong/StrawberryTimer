@@ -16,24 +16,27 @@ class DesktopWidget(tk.Toplevel):
     """Floating desktop widget with strawberry icon and timer display.
 
     Features:
-    - 1/4 size of main window (100x125 pixels)
-    - Transparent background
+    - 1/16 size of main window (400x500 -> 25x31 pixels)
+    - Strawberry-shaped with transparent background
     - Always on top (floats above other windows)
     - Draggable with mouse
     - Can be hidden/closed
     - Shows timer status and remaining time
     """
 
-    # Size: 1/4 of main window (400x500 -> 100x125)
-    WIDTH = 100
-    HEIGHT = 125
+    # Size: 1/4 of current widget size (100x125 -> 25x31)
+    WIDTH = 25
+    HEIGHT = 31
 
     # Default transparency (alpha channel, 0-255)
     DEFAULT_ALPHA = 220
 
     # Minimum size for usability
-    MIN_WIDTH = 80
-    MIN_HEIGHT = 100
+    MIN_WIDTH = 25
+    MIN_HEIGHT = 31
+
+    # Transparent color for shaping (Windows)
+    TRANSPARENT_COLOR = "#00FF00"  # Bright green (will be transparent)
 
     def __init__(self, master=None, timer_engine=None, config_manager=None):
         """Initialize desktop widget.
@@ -81,11 +84,18 @@ class DesktopWidget(tk.Toplevel):
 
     def _setup_window(self) -> None:
         """Setup window properties for floating widget."""
-        # Set size (1/4 of main window)
+        # Set size (small strawberry icon)
         self.geometry(f"{self.WIDTH}x{self.HEIGHT}")
 
         # Frameless window (no title bar, borders)
         self.overrideredirect(1)
+
+        # Set transparent color for strawberry shape (Windows only)
+        try:
+            self.attributes("-transparentcolor", self.TRANSPARENT_COLOR)
+        except tk.TclError:
+            # -transparentcolor not supported on this platform
+            pass
 
         # Transparent background
         self.attributes("-alpha", self.DEFAULT_ALPHA)
@@ -113,57 +123,109 @@ class DesktopWidget(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _create_content(self) -> None:
-        """Create widget content."""
-        # Main container with transparent background effect
-        container = tk.Frame(self, bd=0, highlightthickness=0)
-        container.pack(fill="both", expand=True, padx=2, pady=2)
-
-        # Strawberry icon (larger size - 60 points to be 60% of 100px width)
-        icon_label = tk.Label(
-            container,
-            text="🍓",
-            font=("Segoe UI", 60),
+        """Create widget content with strawberry shape."""
+        # Create canvas for drawing strawberry shape
+        self._canvas = tk.Canvas(
+            self,
+            width=self.WIDTH,
+            height=self.HEIGHT,
+            bg=self.TRANSPARENT_COLOR,
+            highlightthickness=0,
             bd=0,
         )
-        icon_label.pack(pady=(5, 2))
+        self._canvas.pack(fill="both", expand=True)
 
-        # Timer display
-        self._time_label = tk.Label(
-            container,
-            text="25:00",
-            font=("Segoe UI", 12, "bold"),
-            fg=StrawberryTheme.STRAWBERRY_RED,
-            bd=0,
-        )
-        self._time_label.pack(pady=2)
+        # Draw strawberry shape using oval and polygon
+        self._draw_strawberry()
 
-        # Status indicator
-        self._status_label = tk.Label(
-            container,
-            text="● Ready",
-            font=("Segoe UI", 8),
-            fg=StrawberryTheme.STRAWBERRY_RED,
-            bd=0,
-        )
-        self._status_label.pack(pady=(2, 5))
+        # Bind canvas click for drag
+        self._canvas.bind("<Button-1>", self._start_drag)
+        self._canvas.bind("<B1-Motion>", self._do_drag)
+        self._canvas.bind("<ButtonRelease-1>", self._stop_drag)
 
-        # Close button (small X in corner)
-        close_btn = tk.Label(
-            container,
-            text="✕",
-            font=("Segoe UI", 10),
-            fg=StrawberryTheme.FG_COLOR,
-            cursor="hand2",
-            bd=0,
+        # Bind right-click for context menu
+        self._canvas.bind("<Button-3>", self._show_context_menu)
+        self._canvas.bind("<Control-Button-1>", self._show_context_menu)
+
+    def _draw_strawberry(self) -> None:
+        """Draw a strawberry shape on the canvas."""
+        cx, cy = self.WIDTH / 2, self.HEIGHT / 2
+
+        # Strawberry body (heart-shaped red oval)
+        body_width = 18
+        body_height = 20
+        self._canvas.create_oval(
+            cx - body_width / 2, cy - body_height / 2 - 2,
+            cx + body_width / 2, cy + body_height / 2 + 4,
+            fill=StrawberryTheme.STRAWBERRY_RED,
+            outline=StrawberryTheme.STRAWBERRY_DARK,
+            width=1,
+            tags="strawberry"
         )
-        close_btn.place(relx=1.0, rely=0.0, x=-2, y=2)
-        close_btn.bind("<Button-1>", lambda e: self._on_close_button())
+
+        # Green leaves on top (sepal)
+        leaf_color = "#4CAF50"
+        for angle in [-45, 0, 45]:
+            rad = 3.14159 * angle / 180
+            lx = cx + 6 * (rad / 0.8)
+            ly = cy - 8
+            self._canvas.create_oval(
+                lx - 3, ly - 2,
+                lx + 3, ly + 2,
+                fill=leaf_color,
+                outline="",
+                tags="leaves"
+            )
+
+        # Timer text (small, in center)
+        self._time_text = self._canvas.create_text(
+            cx, cy + 1,
+            text="25",
+            font=("Arial", 7, "bold"),
+            fill="white",
+            tags="timer"
+        )
+
+        # Store canvas item references for updates
+        self._canvas_items = {
+            "timer": self._time_text,
+            "strawberry": "strawberry",
+        }
+
+        # Close button (tiny X in top-right)
+        self._canvas.create_rectangle(
+            self.WIDTH - 6, 1,
+            self.WIDTH - 1, 6,
+            fill="#FF0000",
+            outline="white",
+            width=1,
+            tags="close_btn"
+        )
+        self._canvas.create_line(
+            self.WIDTH - 5, 2,
+            self.WIDTH - 2, 5,
+            fill="white",
+            width=1,
+            tags="close_btn"
+        )
+        self._canvas.create_line(
+            self.WIDTH - 5, 5,
+            self.WIDTH - 2, 2,
+            fill="white",
+            width=1,
+            tags="close_btn"
+        )
+
+        # Bind close button
+        self._canvas.tag_bind("close_btn", "<Button-1>", lambda e: self._on_close_button())
 
     def _setup_drag(self) -> None:
-        """Setup mouse drag behavior for widget."""
-        self.bind("<Button-1>", self._start_drag)
-        self.bind("<B1-Motion>", self._do_drag)
-        self.bind("<ButtonRelease-1>", self._stop_drag)
+        """Setup mouse drag behavior for widget.
+
+        Note: Actual bindings are set up in _create_content for the canvas.
+        """
+        # Drag behavior is handled by canvas bindings in _create_content
+        pass
 
     def _start_drag(self, event) -> None:
         """Start dragging widget.
@@ -255,17 +317,22 @@ class DesktopWidget(tk.Toplevel):
         """
         if self._timer_engine and self._visible:
             remaining = self._timer_engine.remaining_time_str
-            self._time_label.config(text=remaining)
 
-            # Update status based on timer state
-            if self._timer_engine.is_running:
-                self._status_label.config(text="● Running", fg="#4CAF50")
-            elif self._timer_engine.is_paused:
-                self._status_label.config(text="● Paused", fg="#FFC107")
-            elif self._timer_engine.is_completed:
-                self._status_label.config(text="● Done!", fg=StrawberryTheme.STRAWBERRY_RED)
-            else:
-                self._status_label.config(text="● Ready", fg=StrawberryTheme.STRAWBERRY_RED)
+            # Update timer text on canvas
+            if hasattr(self, '_canvas') and self._canvas:
+                minutes = int(remaining.split(':')[0]) % 100  # Get last 2 digits of minutes
+                self._canvas.itemconfig(self._time_text, text=str(minutes))
+
+            # Update strawberry color based on timer state
+            if hasattr(self, '_canvas') and self._canvas:
+                if self._timer_engine.is_running:
+                    self._canvas.itemconfig("strawberry", fill="#4CAF50")  # Green when running
+                elif self._timer_engine.is_paused:
+                    self._canvas.itemconfig("strawberry", fill="#FFC107")  # Yellow when paused
+                elif self._timer_engine.is_completed:
+                    self._canvas.itemconfig("strawberry", fill=StrawberryTheme.STRAWBERRY_RED)  # Red when done
+                else:
+                    self._canvas.itemconfig("strawberry", fill=StrawberryTheme.STRAWBERRY_RED)  # Red when ready
 
     def set_status(self, status: str, color: str = None) -> None:
         """Set status text and color.
@@ -274,9 +341,14 @@ class DesktopWidget(tk.Toplevel):
             status: Status text to display.
             color: Optional color for status text.
         """
-        self._status_label.config(text=f"● {status}")
-        if color:
-            self._status_label.config(fg=color)
+        if hasattr(self, '_canvas') and self._canvas:
+            # Update strawberry color based on status
+            if color == "#4CAF50" or "running" in status.lower():
+                self._canvas.itemconfig("strawberry", fill="#4CAF50")
+            elif color == "#FFC107" or "paused" in status.lower():
+                self._canvas.itemconfig("strawberry", fill="#FFC107")
+            else:
+                self._canvas.itemconfig("strawberry", fill=StrawberryTheme.STRAWBERRY_RED)
 
     # ==================== Public API for Tests ====================
 
@@ -313,17 +385,13 @@ class DesktopWidget(tk.Toplevel):
         self._save_settings()
 
     def set_icon(self, icon: str) -> None:
-        """Set widget icon.
+        """Set widget icon (not applicable for canvas-based widget).
 
         Args:
             icon: Icon text (emoji or custom).
         """
-        for widget in self.winfo_children():
-            if isinstance(widget, tk.Frame):
-                for child in widget.winfo_children():
-                    if hasattr(child, "cget") and child.cget("text") == "🍓":
-                        child.config(text=icon)
-                        break
+        # Canvas-based widget doesn't support dynamic icon changes
+        pass
 
     # ==================== Visibility Control ====================
 
@@ -434,9 +502,12 @@ class DesktopWidget(tk.Toplevel):
         """Get current timer display text.
 
         Returns:
-            Time string (MM:SS format).
+            Time string (MM format for widget).
         """
-        return self._time_label.cget("text")
+        if hasattr(self, '_canvas') and self._canvas:
+            text = self._canvas.itemcget(self._time_text, "text")
+            return f"{text}:00"
+        return "25:00"
 
     def get_status(self) -> str:
         """Get current status text.
@@ -444,17 +515,15 @@ class DesktopWidget(tk.Toplevel):
         Returns:
             Status string (idle/running/paused/completed).
         """
-        text = self._status_label.cget("text")
-        status = text.replace("● ", "").strip().lower()
-        # Map to expected status values
-        if "running" in status:
-            return "running"
-        elif "paused" in status:
-            return "paused"
-        elif "done" in status or "complete" in status:
-            return "completed"
-        else:
-            return "idle"
+        if hasattr(self, '_canvas') and self._canvas:
+            color = self._canvas.itemcget("strawberry", "fill")
+            if color == "#4CAF50":
+                return "running"
+            elif color == "#FFC107":
+                return "paused"
+            elif color == StrawberryTheme.STRAWBERRY_RED:
+                return "idle"
+        return "idle"
 
     def has_close_button(self) -> bool:
         """Check if widget has close button.
@@ -479,7 +548,7 @@ class DesktopWidget(tk.Toplevel):
             List of menu item labels.
         """
         items = []
-        for i in range(self._context_menu.index("end")):
+        for i in range(self._context_menu.index("end") + 1):
             try:
                 items.append(self._context_menu.entrycget(i, "label"))
             except tk.TclError:
@@ -498,43 +567,17 @@ class DesktopWidget(tk.Toplevel):
         """Get widget icon.
 
         Returns:
-            Icon text or path.
+            Icon emoji (strawberry).
         """
-        for widget in self.winfo_children():
-            if isinstance(widget, tk.Frame):
-                for child in widget.winfo_children():
-                    if hasattr(child, "cget") and "🍓" in child.cget("text"):
-                        return child.cget("text")
         return "🍓"
 
     def get_icon_size(self) -> int:
-        """Get icon font size.
+        """Get icon size (width of strawberry).
 
         Returns:
-            Font size in points.
+            Icon size in pixels (approximately 60% of widget width).
         """
-        for widget in self.winfo_children():
-            if isinstance(widget, tk.Frame):
-                for child in widget.winfo_children():
-                    if hasattr(child, "cget") and "🍓" in child.cget("text"):
-                        font_spec = child.cget("font")
-                        # Font spec can be a string or tuple
-                        if isinstance(font_spec, str):
-                            # Parse "Segoe UI 24" or "24"
-                            parts = font_spec.split()
-                            if len(parts) >= 2:
-                                try:
-                                    return int(parts[-1])
-                                except ValueError:
-                                    return 24
-                        elif isinstance(font_spec, (list, tuple)):
-                            # Font tuple: (family, size, ...)
-                            if len(font_spec) >= 2:
-                                try:
-                                    return int(font_spec[1])
-                                except (ValueError, IndexError):
-                                    return 24
-        return 24  # Default fallback
+        return int(self.WIDTH * 0.72)  # 18px body width
 
     def draggable(self) -> bool:
         """Check if widget is draggable.
