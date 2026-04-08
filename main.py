@@ -88,13 +88,45 @@ def main():
     # Connect timer to sound
     def on_timer_complete():
         if config_manager.get("sound_enabled"):
-            sound.play(config_manager.get("sound_file"))
+            try:
+                sound.play(config_manager.get("sound_file"))
+            except Exception:
+                # Fallback to system beep if sound fails
+                sound.beep()
+
+        # Update status in main window
+        if app := _get_main_window_ref():
+            app.show_completion()
 
     timer.on_complete(on_timer_complete)
 
-    # Run GUI application
-    # TODO: Pass timer, todos to MainWindow for full integration
-    run_application()
+    # Connect timer tick to update main window display
+    def on_timer_tick():
+        if app := _get_main_window_ref():
+            app.update_timer(timer.remaining_time, timer.progress_percent)
+
+    timer.on_tick(on_timer_tick, interval_seconds=0.5)
+
+    # Run GUI application with timer and config
+    app = run_application(timer, config_manager)
+
+    # Store reference for callbacks (simple approach)
+    _set_main_window_ref(app)
+
+
+# Simple global reference for callbacks (consider using weakref for production)
+_main_window_ref = None
+
+
+def _get_main_window_ref():
+    """Get reference to main window."""
+    return _main_window_ref
+
+
+def _set_main_window_ref(ref):
+    """Set reference to main window."""
+    global _main_window_ref
+    _main_window_ref = ref
 
 
 if __name__ == "__main__":

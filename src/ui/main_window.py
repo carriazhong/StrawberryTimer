@@ -5,44 +5,13 @@ Features strawberry-themed UI with desktop clock widget.
 """
 
 import tkinter as tk
-from tkinter import ttk, font
+from tkinter import ttk
 import time
 from typing import Optional, Callable
 from datetime import timedelta
 
-
-class StrawberryTheme:
-    """Strawberry-themed color scheme and styling."""
-
-    # Strawberry colors
-    STRAWBERRY_RED = "#E53935"
-    STRAWBERRY_DARK = "#B71C1C"
-    STRAWBERRY_LIGHT = "#FFCDD2"
-    STRAWBERRY_PINK = "#F48FB1"
-
-    # UI Colors
-    BG_COLOR = "#FFF5F7"  # Light pinkish background
-    FG_COLOR = "#4A2C2A"  # Dark brown text
-    ACCENT_COLOR = STRAWBERRY_RED
-
-    # Clock colors
-    CLOCK_BG = "#E53935"
-    CLOCK_FG = "#FFFFFF"
-
-    @staticmethod
-    def get_font(size: int, bold: bool = False) -> font.Font:
-        """Get themed font.
-
-        Args:
-            size: Font size in points.
-            bold: Whether font should be bold.
-
-        Returns:
-            Tkinter Font object.
-        """
-        family = "Segoe UI" if tk.TkVersion >= 8.6 else "Arial"
-        weight = "bold" if bold else "normal"
-        return font.Font(family=family, size=size, weight=weight)
+from src.ui.desktop_widget import DesktopWidget
+from src.ui.theme import StrawberryTheme
 
 
 class DigitalClock(tk.Label):
@@ -239,9 +208,18 @@ class TodoSelector(tk.Frame):
 class MainWindow(tk.Tk):
     """Main application window for Strawberry Timer."""
 
-    def __init__(self):
-        """Initialize main window."""
+    def __init__(self, timer_engine=None, config_manager=None):
+        """Initialize main window.
+
+        Args:
+            timer_engine: Optional TimerEngine instance.
+            config_manager: Optional ConfigManager instance.
+        """
         super().__init__()
+
+        self._timer_engine = timer_engine
+        self._config_manager = config_manager
+        self._desktop_widget = None
 
         self.title("🍓 Strawberry Timer")
         self.geometry("400x500")
@@ -256,6 +234,9 @@ class MainWindow(tk.Tk):
 
         # Apply theme to ttk widgets
         self._apply_theme()
+
+        # Create desktop widget
+        self._create_desktop_widget()
 
     def center_window(self) -> None:
         """Center window on screen."""
@@ -348,6 +329,15 @@ class MainWindow(tk.Tk):
             borderwidth=0,
         )
 
+    def _create_desktop_widget(self) -> None:
+        """Create desktop floating widget."""
+        self._desktop_widget = DesktopWidget(
+            master=self,
+            timer_engine=self._timer_engine,
+            config_manager=self._config_manager
+        )
+        self._desktop_widget.show()
+
     # ==================== Event Handlers ====================
 
     def on_start_click(self) -> None:
@@ -403,10 +393,19 @@ class MainWindow(tk.Tk):
         self.todo_selector.set_todos(todos)
 
 
-def run_application() -> None:
-    """Run the Strawberry Timer application."""
-    app = MainWindow()
+def run_application(timer_engine=None, config_manager=None) -> MainWindow:
+    """Run the Strawberry Timer application.
+
+    Args:
+        timer_engine: Optional TimerEngine instance.
+        config_manager: Optional ConfigManager instance.
+
+    Returns:
+        MainWindow instance.
+    """
+    app = MainWindow(timer_engine, config_manager)
     app.mainloop()
+    return app
 
 
 if __name__ == "__main__":
