@@ -2,348 +2,262 @@
 """Strawberry Timer - PyQt5 Version.
 
 A simple, elegant desktop Pomodoro timer with:
-- Real transparency support
-- Custom strawberry-shaped widget
-- Proper timer countdown
+- True strawberry-shaped widget
+- Smaller size (half height)
+- Real transparency
 """
 
 import sys
 from pathlib import Path
-from datetime import timedelta, datetime
 
-# Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from src.timer.engine import TimerEngine
 from src.config import ConfigManager
 
 try:
-    from PyQt5.QtWidgets import (QApplication, QMainWindow, QLabel, QPushButton,
-                                  QVBoxLayout, QHBoxLayout, QWidget, QSystemTrayIcon,
-                                  QMenu, QAction, QSlider)
-    from PyQt5.QtCore import Qt, QTimer, QPoint, pyqtSignal, QRect
-    from PyQt5.QtGui import (QIcon, QPixmap, QPainter, QColor, QPen, QBrush,
-                             QFont, QPainterPath, QRegion)
+    from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QWidget
+    from PyQt5.QtCore import Qt, QTimer
+    from PyQt5.QtGui import QPainter, QColor, QPen, QBrush, QFont, QPainterPath, QPixmap, QRegion
 except ImportError:
-    print("PyQt5 not installed. Please install it with: pip install PyQt5")
+    print("PyQt5 not installed.")
     sys.exit(1)
 
 
 class StrawberryWidget(QWidget):
-    """Floating strawberry widget with TRUE strawberry SHAPE (not just drawing)."""
+    """Tiny strawberry-shaped widget."""
 
     def __init__(self, timer_engine=None):
         super().__init__()
         self.timer_engine = timer_engine
 
-        # Widget size - larger to fit strawberry shape
-        self.setFixedSize(80, 100)
+        # Smaller size - half height
+        self.resize(50, 65)
 
-        # Frameless window
+        # Frameless + always on top
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
-
-        # Transparent background
         self.setAttribute(Qt.WA_TranslucentBackground)
 
-        # Mouse tracking for dragging
         self.setMouseTracking(True)
-        self._drag_position = None
+        self._drag_pos = None
 
-        # Create the strawberry shape mask
-        self._create_shape_mask()
+        # Create strawberry shape
+        self._create_strawberry_shape()
 
-        # Update timer every second
-        self.update_timer()
+    def _create_strawberry_shape(self):
+        """Create strawberry-shaped region."""
+        pixmap = QPixmap(self.size())
+        pixmap.fill(Qt.transparent)
 
-    def _create_shape_mask(self):
-        """Create a mask that gives the widget a strawberry shape."""
-        # Create an empty pixmap for the mask
-        mask_pixmap = QPixmap(self.size())
-        mask_pixmap.fill(Qt.transparent)
+        p = QPainter(pixmap)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(Qt.NoPen)
+        p.setBrush(Qt.black)
 
-        # Draw the strawberry shape on the mask
-        mask_painter = QPainter(mask_pixmap)
-        mask_painter.setRenderHint(QPainter.Antialiasing)
-        mask_painter.setPen(Qt.NoPen)
-        mask_painter.setBrush(Qt.black)
-
-        # Draw strawberry body (heart shape with rounded bottom)
+        # Strawberry body
         path = QPainterPath()
-        path.moveTo(40, 95)  # Bottom tip
-        path.cubicTo(40, 95, 5, 55, 5, 35)  # Left curve
-        path.cubicTo(5, 15, 75, 15, 75, 35)  # Top curve
-        path.cubicTo(75, 55, 40, 95, 40, 95)  # Right curve
-        path.closeSubpath()
+        path.moveTo(25, 62)  # Bottom tip
+        path.cubicTo(25, 62, 3, 35, 3, 22)  # Left side
+        path.cubicTo(3, 8, 47, 8, 47, 22)  # Top curve
+        path.cubicTo(47, 35, 25, 62, 25, 62)  # Right side
+        p.drawPath(path)
+        p.end()
 
-        mask_painter.drawPath(path)
-        mask_painter.end()
-
-        # Apply the mask to the widget
-        mask = mask_pixmap.createMaskFromColor(Qt.transparent)
+        # Apply as mask
+        mask = pixmap.createMaskFromColor(Qt.transparent)
         self.setMask(QRegion(mask))
 
     def paintEvent(self, event):
-        """Draw the strawberry widget."""
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        """Draw strawberry."""
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
 
-        # Get current timer state color
+        # Color based on state
         if self.timer_engine:
             if self.timer_engine.is_running:
-                color = QColor(229, 57, 53)  # Red
-                glow_color = QColor(76, 175, 80, 80)  # Green glow
+                color = QColor(220, 50, 50)  # Brighter red when running
+                glow = QColor(100, 200, 100, 60)  # Green glow
             elif self.timer_engine.is_paused:
-                color = QColor(229, 57, 53)  # Red
-                glow_color = QColor(255, 193, 7, 80)  # Yellow glow
+                color = QColor(220, 50, 50)
+                glow = QColor(255, 200, 50, 60)  # Yellow glow
             else:
-                color = QColor(229, 57, 53)  # Red
-                glow_color = None
+                color = QColor(220, 50, 50)
+                glow = None
         else:
-            color = QColor(229, 57, 53)
-            glow_color = None
+            color = QColor(220, 50, 50)
+            glow = None
 
-        # Draw glow effect when running/paused
-        if glow_color:
+        # Draw glow
+        if glow:
+            p.setBrush(QBrush(glow))
+            p.setPen(Qt.NoPen)
             glow_path = QPainterPath()
-            glow_path.moveTo(40, 100)
-            glow_path.cubicTo(40, 100, 0, 55, 0, 35)
-            glow_path.cubicTo(0, 10, 80, 10, 80, 35)
-            glow_path.cubicTo(80, 55, 40, 100, 40, 100)
-            glow_path.closeSubpath()
-            painter.setBrush(QBrush(glow_color))
-            painter.setPen(Qt.NoPen)
-            painter.drawPath(glow_path)
+            glow_path.moveTo(25, 65)
+            glow_path.cubicTo(25, 65, 0, 35, 0, 20)
+            glow_path.cubicTo(0, 5, 50, 5, 50, 20)
+            glow_path.cubicTo(50, 35, 25, 65, 25, 65)
+            p.drawPath(glow_path)
 
-        # Draw strawberry body
-        painter.setBrush(QBrush(color))
-        painter.setPen(QPen(QColor(183, 28, 28), 2))
+        # Draw body
+        p.setBrush(QBrush(color))
+        p.setPen(QPen(QColor(180, 30, 30), 1.5))
+        body = QPainterPath()
+        body.moveTo(25, 62)
+        body.cubicTo(25, 62, 3, 35, 3, 22)
+        body.cubicTo(3, 8, 47, 8, 47, 22)
+        body.cubicTo(47, 35, 25, 62, 25, 62)
+        p.drawPath(body)
 
-        body_path = QPainterPath()
-        body_path.moveTo(40, 95)  # Bottom tip
-        body_path.cubicTo(40, 95, 5, 55, 5, 35)  # Left curve
-        body_path.cubicTo(5, 15, 75, 15, 75, 35)  # Top curve
-        body_path.cubicTo(75, 55, 40, 95, 40, 95)  # Right curve
-        body_path.closeSubpath()
-        painter.drawPath(body_path)
+        # Seeds
+        p.setBrush(QBrush(QColor(255, 180, 0)))
+        p.setPen(Qt.NoPen)
+        for x, y in [(15, 25), (35, 25), (12, 38), (25, 32), (38, 38), (20, 50), (30, 50)]:
+            p.drawEllipse(x, y, 3, 3)
 
-        # Draw seeds (yellow-orange dots)
-        painter.setBrush(QBrush(QColor(255, 152, 0)))  # Orange-yellow
-        painter.setPen(Qt.NoPen)
-        seed_positions = [
-            (25, 40), (55, 40),  # Top row
-            (20, 55), (40, 50), (60, 55),  # Middle row
-            (30, 70), (50, 70),  # Bottom row
-            (35, 85), (45, 85),  # Near bottom
-        ]
-        for x, y in seed_positions:
-            painter.drawEllipse(x, y, 4, 4)
-
-        # Draw leaves (green calyx) at top
-        painter.setBrush(QBrush(QColor(76, 175, 80)))  # Green
-        painter.setPen(QPen(QColor(56, 142, 60), 1))
-
+        # Leaves
+        p.setBrush(QBrush(QColor(80, 160, 80)))
+        p.setPen(Qt.NoPen)
         # Center leaf
-        leaf_path = QPainterPath()
-        leaf_path.moveTo(40, 18)
-        leaf_path.cubicTo(35, 5, 45, 5, 40, 18)
-        painter.drawPath(leaf_path)
-
+        p.drawEllipse(22, 5, 6, 8)
         # Left leaf
-        left_leaf = QPainterPath()
-        left_leaf.moveTo(38, 20)
-        left_leaf.cubicTo(20, 10, 10, 25, 30, 28)
-        painter.drawPath(left_leaf)
-
+        p.drawEllipse(12, 8, 7, 6)
         # Right leaf
-        right_leaf = QPainterPath()
-        right_leaf.moveTo(42, 20)
-        right_leaf.cubicTo(60, 10, 70, 25, 50, 28)
-        painter.drawPath(right_leaf)
+        p.drawEllipse(31, 8, 7, 6)
 
-        # Draw small stems
-        painter.setPen(QPen(QColor(76, 175, 80), 2))
-        painter.drawLine(40, 18, 40, 25)
-        painter.drawLine(32, 22, 38, 26)
-        painter.drawLine(48, 22, 42, 26)
-
-        # Draw timer text
-        painter.setPen(QPen(QColor(255, 255, 255), 2))
-        painter.setFont(QFont("Arial", 18, QFont.Bold))
-
+        # Timer text
+        p.setPen(QColor(255, 255, 255))
+        p.setFont(QFont("Arial", 12, QFont.Bold))
+        mins = "25"
         if self.timer_engine:
-            remaining = self.timer_engine.remaining
-            minutes = int(remaining.total_seconds() // 60)
-            text = str(minutes)
-        else:
-            text = "25"
+            mins = str(int(self.timer_engine.remaining.total_seconds() // 60))
+        p.drawText(self.rect(), Qt.AlignCenter, mins)
 
-        painter.drawText(self.rect(), Qt.AlignCenter, text)
+        # Close button (tiny white dot)
+        p.setBrush(QBrush(QColor(255, 255, 255, 200)))
+        p.drawEllipse(42, 2, 6, 6)
 
-        # Draw close button (small X in corner) - white circle
-        painter.setBrush(QBrush(QColor(255, 255, 255, 220)))
-        painter.setPen(Qt.NoPen)
-        painter.drawEllipse(68, 2, 10, 10)
-        painter.setPen(QPen(QColor(100, 100, 100), 1.5))
-        painter.drawLine(70, 4, 76, 10)
-        painter.drawLine(76, 4, 70, 10)
-
-    def mousePressEvent(self, event):
-        """Handle mouse press for dragging and close."""
-        if event.button() == Qt.LeftButton:
-            # Check if close button clicked
-            if 68 <= event.x() <= 78 and 2 <= event.y() <= 12:
+    def mousePressEvent(self, ev):
+        if ev.button() == Qt.LeftButton:
+            if 42 <= ev.x() <= 48 and 2 <= ev.y() <= 8:
                 self.hide()
             else:
-                self._drag_position = event.globalPos() - self.frameGeometry().topLeft()
+                self._drag_pos = ev.globalPos() - self.frameGeometry().topLeft()
 
-    def mouseMoveEvent(self, event):
-        """Handle mouse move for dragging."""
-        if self._drag_position and event.buttons() == Qt.LeftButton:
-            self.move(event.globalPos() - self._drag_position)
+    def mouseMoveEvent(self, ev):
+        if self._drag_pos and ev.buttons() == Qt.LeftButton:
+            self.move(ev.globalPos() - self._drag_pos)
 
-    def mouseReleaseEvent(self, event):
-        """Handle mouse release."""
-        self._drag_position = None
+    def mouseReleaseEvent(self, ev):
+        self._drag_pos = None
 
     def update_timer(self):
-        """Update the timer display."""
-        self.update()  # Trigger repaint
+        self.update()
 
 
 class MainWindow(QMainWindow):
-    """Main timer window."""
-
-    def __init__(self, timer_engine):
+    def __init__(self, timer):
         super().__init__()
-        self.timer_engine = timer_engine
+        self.timer = timer
         self.init_ui()
-        self.init_strawberry_widget()
+        self.init_strawberry()
 
     def init_ui(self):
-        """Initialize the UI."""
         self.setWindowTitle("🍓 Strawberry Timer")
-        self.setFixedSize(350, 400)
+        self.setFixedSize(320, 380)
 
-        # Central widget
         central = QWidget()
         self.setCentralWidget(central)
+        central.setStyleSheet("background-color: #FFF5F7;")
 
-        # Layout
         layout = QVBoxLayout(central)
-        layout.setSpacing(15)
+        layout.setSpacing(12)
 
         # Title
         title = QLabel("🍓 Strawberry Timer")
         title.setAlignment(Qt.AlignCenter)
-        title.setFont(QFont("Arial", 20, QFont.Bold))
+        title.setFont(QFont("Arial", 18, QFont.Bold))
         title.setStyleSheet("color: #E53935;")
         layout.addWidget(title)
 
-        # Timer display
-        self.timer_display = QLabel("25:00")
-        self.timer_display.setAlignment(Qt.AlignCenter)
-        self.timer_display.setFont(QFont("Arial", 48, QFont.Bold))
-        self.timer_display.setStyleSheet("color: #E53935;")
-        layout.addWidget(self.timer_display)
+        # Timer
+        self.timer_label = QLabel("25:00")
+        self.timer_label.setAlignment(Qt.AlignCenter)
+        self.timer_label.setFont(QFont("Arial", 42, QFont.Bold))
+        self.timer_label.setStyleSheet("color: #E53935;")
+        layout.addWidget(self.timer_label)
 
-        # Progress bar (simple label for now)
-        self.progress_label = QLabel("Ready to focus!")
-        self.progress_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.progress_label)
+        # Status
+        self.status = QLabel("Ready to focus!")
+        self.status.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.status)
 
-        # Buttons
-        button_layout = QHBoxLayout()
-
-        self.start_btn = QPushButton("▶ Start")
-        self.start_btn.clicked.connect(self.on_start)
-        self.start_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #E53935;
-                color: white;
-                font-size: 14px;
-                font-weight: bold;
-                padding: 10px 20px;
-                border: none;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #C62828;
-            }
-            QPushButton:disabled {
-                background-color: #EF9A9A;
-            }
-        """)
-
-        self.pause_btn = QPushButton("⏸ Pause")
-        self.pause_btn.clicked.connect(self.on_pause)
-        self.pause_btn.setEnabled(False)
-        self.pause_btn.setStyleSheet(self.start_btn.styleSheet())
-
-        self.stop_btn = QPushButton("⏹ Stop")
-        self.stop_btn.clicked.connect(self.on_stop)
-        self.stop_btn.setEnabled(False)
-        self.stop_btn.setStyleSheet(self.start_btn.styleSheet())
-
-        button_layout.addWidget(self.start_btn)
-        button_layout.addWidget(self.pause_btn)
-        button_layout.addWidget(self.stop_btn)
-
-        layout.addLayout(button_layout)
-
-        # Add stretch to push everything up
         layout.addStretch()
 
-        # Background color
-        central.setStyleSheet("background-color: #FFF5F7;")
+        # Buttons
+        btn_style = """
+            QPushButton {
+                background-color: #E53935; color: white; font-size: 13px;
+                font-weight: bold; padding: 8px 18px; border: none; border-radius: 4px;
+            }
+            QPushButton:hover { background-color: #C62828; }
+            QPushButton:disabled { background-color: #EF9A9A; }
+        """
 
-    def init_strawberry_widget(self):
-        """Initialize the floating strawberry widget."""
-        self.strawberry = StrawberryWidget(self.timer_engine)
+        btn_layout = QHBoxLayout()
+        self.start_btn = QPushButton("▶ Start")
+        self.start_btn.setStyleSheet(btn_style)
+        self.start_btn.clicked.connect(self.on_start)
+
+        self.pause_btn = QPushButton("⏸ Pause")
+        self.pause_btn.setStyleSheet(btn_style)
+        self.pause_btn.setEnabled(False)
+        self.pause_btn.clicked.connect(self.on_pause)
+
+        self.stop_btn = QPushButton("⏹ Stop")
+        self.stop_btn.setStyleSheet(btn_style)
+        self.stop_btn.setEnabled(False)
+        self.stop_btn.clicked.connect(self.on_stop)
+
+        btn_layout.addWidget(self.start_btn)
+        btn_layout.addWidget(self.pause_btn)
+        btn_layout.addWidget(self.stop_btn)
+        layout.addLayout(btn_layout)
+
+    def init_strawberry(self):
+        self.strawberry = StrawberryWidget(self.timer)
         self.strawberry.show()
-
-        # Position in top-right
         screen = QApplication.desktop().screenGeometry()
-        self.strawberry.move(screen.width() - 120, 50)
+        self.strawberry.move(screen.width() - 80, 50)
 
-    # Timer update method
     def update_timer(self):
-        """Update timer display."""
-        remaining = self.timer_engine.remaining_time_str
-        self.timer_display.setText(remaining)
-
-        # Update strawberry widget
+        self.timer_label.setText(self.timer.remaining_time_str)
         self.strawberry.update_timer()
 
-        # Update progress text
-        if self.timer_engine.is_running:
-            self.progress_label.setText("🍓 Focus time! Stay productive!")
-        elif self.timer_engine.is_paused:
-            self.progress_label.setText("⏸️ Timer paused.")
+        if self.timer.is_running:
+            self.status.setText("🍓 Focus time!")
+        elif self.timer.is_paused:
+            self.status.setText("⏸️ Paused")
         else:
-            self.progress_label.setText("Ready to focus!")
+            self.status.setText("Ready to focus!")
 
-    # Button handlers
     def on_start(self):
-        """Start the timer."""
-        self.timer_engine.start()
+        self.timer.start()
         self.start_btn.setEnabled(False)
         self.pause_btn.setEnabled(True)
         self.stop_btn.setEnabled(True)
         self.update_timer()
 
     def on_pause(self):
-        """Pause/resume the timer."""
-        if self.timer_engine.is_running:
-            self.timer_engine.pause()
+        if self.timer.is_running:
+            self.timer.pause()
             self.pause_btn.setText("▶ Resume")
         else:
-            self.timer_engine.resume()
+            self.timer.resume()
             self.pause_btn.setText("⏸ Pause")
         self.update_timer()
 
     def on_stop(self):
-        """Stop the timer."""
-        self.timer_engine.stop()
+        self.timer.stop()
         self.start_btn.setEnabled(True)
         self.pause_btn.setEnabled(False)
         self.pause_btn.setText("⏸ Pause")
@@ -352,33 +266,26 @@ class MainWindow(QMainWindow):
 
 
 def main():
-    """Main entry point."""
     app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)  # Don't quit when strawberry closes
+    app.setQuitOnLastWindowClosed(False)
 
-    # Load configuration
-    config_manager = ConfigManager.load()
+    config = ConfigManager.load()
+    timer = TimerEngine(config.all)
 
-    # Create timer
-    timer = TimerEngine(config_manager.all)
-
-    # Create main window
     window = MainWindow(timer)
     window.show()
 
-    # Set up update timer (refresh every 100ms)
+    # Update timer
     update_timer = QTimer()
     update_timer.timeout.connect(window.update_timer)
     update_timer.start(100)
 
-    # Connect timer completion
-    def on_complete():
-        window.progress_label.setText("🎉 Time for a break!")
-        window.start_btn.setEnabled(True)
-        window.pause_btn.setEnabled(False)
+    timer.on_complete(lambda: (
+        window.status.setText("🎉 Break time!"),
+        window.start_btn.setEnabled(True),
+        window.pause_btn.setEnabled(False),
         window.stop_btn.setEnabled(False)
-
-    timer.on_complete(on_complete)
+    ))
 
     sys.exit(app.exec_())
 
