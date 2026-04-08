@@ -85,6 +85,12 @@ def main():
     sound = SoundPlayer(config_manager.get("volume"))
     todos = TodoIntegration()
 
+    # Run GUI application FIRST to get the window reference
+    app = run_application(timer, config_manager)
+
+    # Store reference for callbacks (must be done BEFORE timer starts)
+    _set_main_window_ref(app)
+
     # Connect timer to sound
     def on_timer_complete():
         if config_manager.get("sound_enabled"):
@@ -106,12 +112,6 @@ def main():
             app.update_timer(timer.remaining_time, timer.progress_percent)
 
     timer.on_tick(on_timer_tick, interval_seconds=0.5)
-
-    # Run GUI application with timer and config
-    app = run_application(timer, config_manager)
-
-    # Store reference for callbacks (simple approach)
-    _set_main_window_ref(app)
 
 
 # Simple global reference for callbacks (consider using weakref for production)

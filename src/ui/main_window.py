@@ -317,6 +317,9 @@ class MainWindow(tk.Tk):
         )
         self.status_label.pack(pady=20)
 
+        # Start the UI update loop (polling timer from main thread)
+        self._start_ui_update_loop()
+
     def _apply_theme(self) -> None:
         """Apply strawberry theme to ttk widgets."""
         style = ttk.Style()
@@ -337,6 +340,23 @@ class MainWindow(tk.Tk):
             config_manager=self._config_manager
         )
         self._desktop_widget.show()
+
+    def _start_ui_update_loop(self) -> None:
+        """Start polling timer state from main thread (Tkinter requires this)."""
+        if self._timer_engine:
+            remaining = self._timer_engine.remaining
+            progress = self._timer_engine.progress_percent
+
+            # Update main window display
+            self.timer_display.update_time(remaining)
+            self.progress_bar.set_progress(progress)
+
+            # Update desktop widget
+            if hasattr(self, '_desktop_widget') and self._desktop_widget:
+                self._desktop_widget.update_from_engine()
+
+        # Schedule next update (every 100ms)
+        self.after(100, self._start_ui_update_loop)
 
     # ==================== Event Handlers ====================
 

@@ -327,6 +327,27 @@ class DesktopWidget(tk.Toplevel):
 
     # ==================== Content Updates ====================
 
+    def update_from_engine(self) -> None:
+        """Update widget from timer engine (called from main thread)."""
+        if self._timer_engine and self._visible:
+            remaining = self._timer_engine.remaining
+            total_seconds = int(remaining.total_seconds())
+            minutes = total_seconds // 60
+
+            # Update timer text on canvas
+            if hasattr(self, '_canvas') and self._canvas:
+                self._canvas.itemconfig(self._time_text, text=str(minutes))
+
+                # Update strawberry color based on timer state
+                if self._timer_engine.is_running:
+                    self._canvas.itemconfig("strawberry_body", fill="#4CAF50")  # Green when running
+                elif self._timer_engine.is_paused:
+                    self._canvas.itemconfig("strawberry_body", fill="#FFC107")  # Yellow when paused
+                elif self._timer_engine.is_completed:
+                    self._canvas.itemconfig("strawberry_body", fill="#E53935")  # Red when done
+                else:
+                    self._canvas.itemconfig("strawberry_body", fill="#E53935")  # Red when ready
+
     def _update_time(self) -> None:
         """Update timer display from TimerEngine.
 
