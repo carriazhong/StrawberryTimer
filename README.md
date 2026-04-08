@@ -35,10 +35,21 @@ StawberryTimer/
 
 ## Installation
 
+### Step 1: Install Python Dependencies
 ```bash
 pip install -r requirements.txt
+```
+
+### Step 2: Run the Application
+```bash
 python main.py
 ```
+
+### Sound Support
+The app uses built-in OS sound commands - no additional packages needed:
+- **Windows**: Uses `winsound` (built-in with Python)
+- **macOS**: Uses `afplay` (built-in with macOS)
+- **Linux**: Uses `paplay` or `aplay` (install via `sudo apt install pulseaudio-utils` or `sudo apt install alsa-utils`)
 
 ## Usage
 
